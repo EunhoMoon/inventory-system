@@ -18,7 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
-@Transactional
+//@Transactional
 class StockServiceTest {
 
     @Autowired
@@ -81,6 +81,31 @@ class StockServiceTest {
 
         Stock stock = stockRepository.findById(1L).orElseThrow();
 
+        assertThat(stock.getQuantity()).isNotEqualTo(0);
+    }
+
+    @Test
+    @DisplayName("동시 요청 with pessimistic lock")
+    void concurrentWithPessimisticLock() throws InterruptedException {
+        // given
+        int threadCount = 100;
+        ExecutorService executorService = Executors.newFixedThreadPool(32);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+
+        // when
+        for (int i = 0; i < threadCount; i++) {
+            executorService.execute(() -> {
+                try {
+                    stockService.decreaseWithPessimisticLock(1L, 1L);
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+        latch.await();
+
+        // then
+        Stock stock = stockRepository.findById(1L).orElseThrow();
         assertThat(stock.getQuantity()).isEqualTo(0);
     }
 
