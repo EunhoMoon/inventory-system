@@ -43,4 +43,10 @@ public class StockService {
         stock.decrease(quantity);
     }
 
+    @Transactional(propagation = REQUIRES_NEW)
+    public void decreaseWithRedisLock(Long id, Long quantity) {
+        Stock stock = stockRepository.findById(id).orElseThrow();
+        stock.decrease(quantity);
+    }
+
 }
